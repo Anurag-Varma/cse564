@@ -1,0 +1,51 @@
+body, html {
+    height: 100%;
+    margin: 0;
+}
+  
+
+
+
+
+svg text{
+    fill:black ;
+}
+
+.axis text {
+    font-family: sans-serif;
+    font-size: 10px;
+}
+
+.tooltip {
+    position: absolute;
+    text-align: center;
+    width: auto;
+    height: auto;
+    padding: 2px;
+    font: 12px sans-serif;
+    border: 0px;
+    border-radius: 8px;
+    pointer-events: none;
+    opacity: 0;
+}
+
+path {
+    fill: none;
+    stroke-width: 1.5px;
+}
+
+
+
+
+
+
+.axis path,
+.axis line {
+    fill: none;
+    stroke: black;
+    shape-rendering: crispEdges;
+}
+.line {
+    fill: none;
+    stroke-width: 1.5px;
+}
