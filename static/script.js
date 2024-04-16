@@ -16,8 +16,8 @@ load_data()
 
 
 function lineChart() {
-    var svgWidth = 960, svgHeight = 500;
-    var margin = { top: 20, right: 80, bottom: 30, left: 50 };
+    var svgWidth = 700, svgHeight = 350;
+    var margin = { top: 20, right: 90, bottom: 40, left: 50 };
     var width = svgWidth - margin.left - margin.right;
     var height = svgHeight - margin.top - margin.bottom;
 
@@ -54,7 +54,6 @@ function lineChart() {
     });
 
     x.domain(d3.extent(songData, function(d) { return d.snapshot_date; }));
-
     y.domain([
         d3.min(songs, function(c) { return d3.min(c.values, function(v) { return v.frequency; }); }),
         d3.max(songs, function(c) { return d3.max(c.values, function(v) { return v.frequency; }); })
@@ -63,7 +62,13 @@ function lineChart() {
     svg.append("g")
         .attr("class", "x axis")
         .attr("transform", "translate(0," + height + ")")
-        .call(d3.axisBottom(x));
+        .call(d3.axisBottom(x))
+        .selectAll("text")  // select all the text elements for the x-axis
+        .style("text-anchor", "end")  // this styles the anchor of the text at the end
+        .attr("dx", "-.8em")  // sets a displacement on the x-axis
+        .attr("dy", ".15em")  // sets a displacement on the y-axis
+        .attr("transform", "rotate(-45)");  // rotates the text
+
 
     svg.append("g")
         .attr("class", "y axis")
@@ -74,19 +79,39 @@ function lineChart() {
         .enter().append("g")
         .attr("class", "song");
 
-    song.append("path")
+    var path = song.append("path")
         .attr("class", "line")
         .attr("d", function(d) { return line(d.values); })
         .style("stroke", function(d) { return color(d.name); });
 
-    song.append("text")
+    var text = song.append("text")
         .datum(function(d) { return {name: d.name, value: d.values[d.values.length - 1]}; })
+        .attr("class", "text")
         .attr("transform", function(d) { return "translate(" + x(d.value.date) + "," + y(d.value.frequency) + ")"; })
         .attr("x", 3)
         .attr("dy", "0.35em")
         .style("font", "10px sans-serif")
         .text(function(d) { return d.name; });
+
+    var highlightElements = function(d) {
+        d3.selectAll(".line").classed("faded", true);
+        d3.selectAll(".text").classed("faded", true);
+        d3.select(this.parentNode).select(".line").classed("highlight", true).classed("faded", false);
+        d3.select(this.parentNode).select(".text").classed("highlight", true).classed("faded", false);
+    };
+
+    var resetElements = function(d) {
+        d3.selectAll(".line").classed("faded", false).classed("highlight", false);
+        d3.selectAll(".text").classed("faded", false).classed("highlight", false);
+    };
+
+    path.on("mouseover", highlightElements)
+        .on("mouseout", resetElements);
+
+    text.on("mouseover", highlightElements)
+        .on("mouseout", resetElements);
 }
+
 
 
 

@@ -39,13 +39,33 @@ path {
 
 
 
-.axis path,
-.axis line {
-    fill: none;
-    stroke: black;
-    shape-rendering: crispEdges;
-}
+
+
+
 .line {
-    fill: none;
-    stroke-width: 1.5px;
+    transition: stroke-opacity 0.5s;
+    stroke-width: 2.5px;
+}
+
+.line.faded {
+    stroke-opacity: 0.1;
+}
+
+.line.highlight {
+    stroke-width: 3.5px;
+    stroke-opacity: 1;
+}
+
+.text {
+    transition: fill-opacity 0.5s;
+}
+
+.text.faded {
+    fill-opacity: 0.2;
+}
+
+.text.highlight {
+    fill: #000;
+    font-weight: bold;
+    fill-opacity: 1;
 }
