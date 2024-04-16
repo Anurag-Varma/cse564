@@ -31,7 +31,7 @@ svg text{
 
 path {
     fill: none;
-    stroke-width: 1.5px;
+    stroke-width: 1px;
 }
 
 
@@ -69,3 +69,6 @@ path {
     font-weight: bold;
     fill-opacity: 1;
 }
+
+
+

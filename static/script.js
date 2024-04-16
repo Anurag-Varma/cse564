@@ -6,9 +6,14 @@ function load_data(){
         main_response=response;
     })
     .then(function(){
-       //renderPCP();
        lineChart();
     })
+    .then(function(){
+        timeSeriesPlot();
+     })
+     .then(function(){
+        renderPCP();
+     })
 
 }
 load_data()
@@ -16,10 +21,12 @@ load_data()
 
 
 function lineChart() {
-    var svgWidth = 700, svgHeight = 350;
-    var margin = { top: 20, right: 90, bottom: 40, left: 50 };
+    var svgWidth = 750, svgHeight = 270;
+    var margin = { top: 20, right: 140, bottom: 35, left: 60 };
     var width = svgWidth - margin.left - margin.right;
     var height = svgHeight - margin.top - margin.bottom;
+
+    d3.select("#line-plot").select("svg").remove();
 
     var svg = d3.select("#line-plot").append("svg")
         .attr("width", svgWidth)
@@ -62,19 +69,18 @@ function lineChart() {
     svg.append("g")
         .attr("class", "x axis")
         .attr("transform", "translate(0," + height + ")")
-        .call(d3.axisBottom(x))
-        .selectAll("text")  // select all the text elements for the x-axis
-        .style("text-anchor", "end")  // this styles the anchor of the text at the end
-        .attr("dx", "-.8em")  // sets a displacement on the x-axis
-        .attr("dy", ".15em")  // sets a displacement on the y-axis
-        .attr("transform", "rotate(-45)");  // rotates the text
-
+        .call(d3.axisBottom(x).ticks(d3.timeWeek.every(1)).tickFormat(d3.timeFormat("%Y-%m-%d")))
+        .selectAll("text")
+        .style("text-anchor", "end")
+        .attr("dx", "-.8em")
+        .attr("dy", ".15em")
+        .attr("transform", "rotate(-25)");
 
     svg.append("g")
         .attr("class", "y axis")
         .call(d3.axisLeft(y));
 
-    var song = svg.selectAll(".song")
+        var song = svg.selectAll(".song")
         .data(songs)
         .enter().append("g")
         .attr("class", "song");
@@ -84,32 +90,149 @@ function lineChart() {
         .attr("d", function(d) { return line(d.values); })
         .style("stroke", function(d) { return color(d.name); });
 
-    var text = song.append("text")
-        .datum(function(d) { return {name: d.name, value: d.values[d.values.length - 1]}; })
-        .attr("class", "text")
-        .attr("transform", function(d) { return "translate(" + x(d.value.date) + "," + y(d.value.frequency) + ")"; })
-        .attr("x", 3)
-        .attr("dy", "0.35em")
-        .style("font", "10px sans-serif")
-        .text(function(d) { return d.name; });
-
-    var highlightElements = function(d) {
-        d3.selectAll(".line").classed("faded", true);
-        d3.selectAll(".text").classed("faded", true);
-        d3.select(this.parentNode).select(".line").classed("highlight", true).classed("faded", false);
-        d3.select(this.parentNode).select(".text").classed("highlight", true).classed("faded", false);
+    var highlightElements = function() {
+        var selected = this;
+        d3.selectAll(".line").filter(function() {
+            return this !== selected;
+        }).classed("faded", true);
+        d3.select(this).classed("highlight", true).classed("faded", false);
     };
 
-    var resetElements = function(d) {
+    var resetElements = function() {
         d3.selectAll(".line").classed("faded", false).classed("highlight", false);
-        d3.selectAll(".text").classed("faded", false).classed("highlight", false);
     };
 
     path.on("mouseover", highlightElements)
         .on("mouseout", resetElements);
 
-    text.on("mouseover", highlightElements)
-        .on("mouseout", resetElements);
+    // Create a legend at the specified position
+    var legend = svg.append("g")
+        .attr("class", "legend")
+        .attr("transform", "translate(" + (width + 5) + ",10)");
+
+    legend.selectAll(".legend-entry")
+        .data(songs)
+        .enter().append("g")
+        .attr("class", "legend-entry")
+        .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; })
+        .each(function(d) {
+            d3.select(this).append("rect")
+                .attr("width", 10)
+                .attr("height", 10)
+                .attr("fill", color(d.name));
+
+            d3.select(this).append("text")
+                .attr("x", 15)
+                .attr("y", 10)
+                .text(d.name)
+                .style("font", "10px sans-serif")
+                .attr("text-anchor", "start");
+        });
+}
+
+
+
+function timeSeriesPlot() {
+    // Existing code to parse data and set up the graph
+    var songData = JSON.parse(main_response.song_frequency_over_time);
+    var parseDate = d3.timeParse("%Y-%m-%d");
+
+    var fixedStartDate = new Date(main_response.fixed_start_date)
+    var fixedEndDate = new Date(main_response.fixed_end_date)
+    
+    songData.forEach(function(d) {
+        d.snapshot_date = parseDate(d.snapshot_date);
+    });
+
+    var margin = { top: 5, right: 20, bottom: 50, left: 60 },
+        width = 630 - margin.left - margin.right,
+        height = 90 - margin.top - margin.bottom;
+
+    var svg = d3.select("#date-selector").append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    var x = d3.scaleTime()
+        .range([0, width])
+        .domain([fixedStartDate, fixedEndDate]);
+
+    var xAxis = d3.axisBottom(x)
+        .ticks(d3.timeWeek.every(1))
+        .tickFormat(d3.timeFormat("%Y-%m-%d"));
+
+    svg.append("g")
+        .attr("class", "x-axis")
+        .attr("transform", "translate(0," + height + ")")
+        .call(xAxis)
+        .selectAll("text")
+        .style("text-anchor", "end")
+        .attr("dx", "-.8em")
+        .attr("dy", ".15em")
+        .attr("transform", "rotate(-25)");
+
+    // Brush setup
+    var brush = d3.brushX()
+        .extent([[0, 0], [width, height]])
+        .on("end", updateDateRange);
+
+    svg.append("g")
+        .attr("class", "brush")
+        .call(brush)
+        .call(brush.move, x.range()); // Set initial brush selection to the full range
+
+    function updateDateRange(event) {
+        const selection = event.selection;
+        if (!selection) return; // Ignore empty selections
+    
+        var startDate = x.invert(selection[0]);
+        var endDate = x.invert(selection[1]);
+        const oneDay = 86400000; // milliseconds in one day
+        const minDuration = 7 * oneDay; // minimum duration of 7 days
+        
+        // Check if the dates are valid
+        if (!(startDate instanceof Date && !isNaN(startDate)) || !(endDate instanceof Date && !isNaN(endDate))) {
+            console.error("Invalid date(s) detected:", startDate, endDate);
+            return; // Stop the function if dates are invalid
+        }
+    
+        // Check if the duration is less than 7 days
+        if (endDate - startDate < minDuration) {
+            endDate = new Date(startDate.getTime() + minDuration); // Set end date to start date + 7 days
+            d3.select(".brush").call(brush.move, [x(startDate), x(endDate)]);
+        }
+    
+        sendDateRangeToFlask(startDate, endDate);
+    }
+    
+
+
+    // Function to send data to Flask
+    function sendDateRangeToFlask(startDate, endDate) {
+        fetch('/update-date-range', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                start_date: startDate.toISOString().slice(0, 10),
+                end_date: endDate.toISOString().slice(0, 10)
+            })
+        }).then(response => response.json())
+          .then(
+            d3.json("/data").then(function(response) {
+                main_response=response;
+            })
+            .then(function(){
+               lineChart();
+            })
+            .then(function(){
+                renderPCP();
+             })
+        )
+          .catch((error) => console.error('Error:', error));
+    }
 }
 
 
@@ -144,9 +267,9 @@ function renderPCP() {
     d3.select("#pcp-plot").select("svg").remove();
 
     // Define margins, width, and height for the plot area
-    const margin = { top: 30, right: 10, bottom: 50, left: 40 }, // Increased left margin for axis labels
-        width = 1500 - margin.left - margin.right,
-        height = 550 - margin.top - margin.bottom;
+    const margin = { top: 30, right: 10, bottom: 50, left: 5 }, // Increased left margin for axis labels
+        width = 800 - margin.left - margin.right,
+        height = 350 - margin.top - margin.bottom;
 
     // Append SVG and a group element to the DOM
     const svg = d3.select("#pcp-plot")
@@ -197,7 +320,7 @@ function renderPCP() {
             .merge(paths) // Merge enter and update selection
             .attr("d", drawPath)
             .style("stroke", d => color(d.Cluster))
-            .style("opacity", 0.7);
+            .style("opacity", 0.5);
 
         paths.exit().remove(); // Remove any unnecessary paths
     }
@@ -286,7 +409,7 @@ function renderPCP() {
         .attr("y", -9)
         .text(d => d)
         .style("cursor", "crosshair")
-        .style("font-size", "15px"); // Increase the font size here
+        .style("font-size", "10px"); // Increase the font size here
 
     // Add brush functionality to filter dimensions
     dimension.append("g")
