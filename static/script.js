@@ -22,7 +22,7 @@ load_data()
 
 function lineChart() {
     var svgWidth = 750, svgHeight = 270;
-    var margin = { top: 20, right: 140, bottom: 35, left: 60 };
+    var margin = { top: 30, right: 140, bottom: 20, left: 60 };
     var width = svgWidth - margin.left - margin.right;
     var height = svgHeight - margin.top - margin.bottom;
 
@@ -69,12 +69,12 @@ function lineChart() {
     svg.append("g")
         .attr("class", "x axis")
         .attr("transform", "translate(0," + height + ")")
-        .call(d3.axisBottom(x).ticks(d3.timeWeek.every(1)).tickFormat(d3.timeFormat("%Y-%m-%d")))
+        .call(d3.axisBottom(x).ticks(d3.timeWeek.every(1)).tickFormat(d3.timeFormat("%m-%d")))
         .selectAll("text")
         .style("text-anchor", "end")
-        .attr("dx", "-.8em")
-        .attr("dy", ".15em")
-        .attr("transform", "rotate(-25)");
+        .attr("dx", "1em")
+        .attr("dy", ".85em")
+        .attr("transform", "rotate(0)");
 
     svg.append("g")
         .attr("class", "y axis")
@@ -160,7 +160,7 @@ function timeSeriesPlot() {
 
     var xAxis = d3.axisBottom(x)
         .ticks(d3.timeWeek.every(1))
-        .tickFormat(d3.timeFormat("%Y-%m-%d"));
+        .tickFormat(d3.timeFormat("%m-%d"));
 
     svg.append("g")
         .attr("class", "x-axis")
@@ -168,9 +168,8 @@ function timeSeriesPlot() {
         .call(xAxis)
         .selectAll("text")
         .style("text-anchor", "end")
-        .attr("dx", "-.8em")
-        .attr("dy", ".15em")
-        .attr("transform", "rotate(-25)");
+        .attr("dx", "1em")
+        .attr("dy", "1em");
 
     // Brush setup
     var brush = d3.brushX()
@@ -267,9 +266,9 @@ function renderPCP() {
     d3.select("#pcp-plot").select("svg").remove();
 
     // Define margins, width, and height for the plot area
-    const margin = { top: 30, right: 10, bottom: 50, left: 5 }, // Increased left margin for axis labels
+    const margin = { top: 30, right: 10, bottom: 5, left: 5 }, // Increased left margin for axis labels
         width = 800 - margin.left - margin.right,
-        height = 350 - margin.top - margin.bottom;
+        height = 300 - margin.top - margin.bottom;
 
     // Append SVG and a group element to the DOM
     const svg = d3.select("#pcp-plot")

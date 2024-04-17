@@ -17,7 +17,7 @@ def index():
 
 def readdata():
     global start_date, end_date, fixed_end_date, fixed_start_date
-    df = pd.read_csv("universal_top_spotify_songs_new.csv", index_col=False)
+    df = pd.read_csv("filtered_data.csv", index_col=False)
     df['snapshot_date'] = pd.to_datetime(df['snapshot_date'])
     start_date = df['snapshot_date'].min()
     end_date = df['snapshot_date'].max()
@@ -58,7 +58,7 @@ def mainfunc():
         "pcp_data": pcp_data_json,
         "song_frequency_over_time": song_frequency_over_time_json,
         "fixed_start_date":fixed_start_date,
-        "fixed_end_date": fixed_end_date
+        "fixed_end_date": fixed_end_date,
     })
 
 @app.route('/update-date-range', methods=['POST'])
