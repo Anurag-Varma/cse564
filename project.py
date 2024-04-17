@@ -1,6 +1,7 @@
 from flask import Flask, render_template, jsonify, request
 import pandas as pd
 import numpy as np
+import pycountry
 
 app = Flask(__name__)
 
@@ -53,12 +54,34 @@ def mainfunc():
     pcp_data = pcp_data.sample(n=100)
     pcp_data_json = pcp_data.to_json(orient='records')
 
+
+    # Count the frequency of each country
+    country_counts = filtered_sample['country'].value_counts().reset_index()
+    country_counts.columns = ['country', 'frequency']
+
+    # Mapping alpha-2 country codes to country names
+    country_counts['country_name'] = country_counts['country'].apply(
+        lambda x: pycountry.countries.get(alpha_2=x).name if pycountry.countries.get(alpha_2=x) else None
+    )
+
+    # Mapping alpha-2 country codes to numeric country codes
+    country_counts['country_number'] = country_counts['country'].apply(
+        lambda x: pycountry.countries.get(alpha_2=x).numeric if pycountry.countries.get(alpha_2=x) else None
+    )
+
+    # Remove rows with no country name or number code
+    country_counts_cleaned = country_counts.dropna(subset=['country_name', 'country_number'])
+
+    # Convert the cleaned country counts to a dictionary format that includes country name, numeric code, and frequency
+    country_frequency_dict = country_counts_cleaned.set_index('country_number').to_dict('index')    
+
     # Return JSON data for the client side
     return jsonify({
         "pcp_data": pcp_data_json,
         "song_frequency_over_time": song_frequency_over_time_json,
         "fixed_start_date":fixed_start_date,
         "fixed_end_date": fixed_end_date,
+        "country_frequency_dict":country_frequency_dict
     })
 
 @app.route('/update-date-range', methods=['POST'])

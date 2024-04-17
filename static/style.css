@@ -1,8 +1,10 @@
-body, html {
+html, body {
     height: 100%;
+    width: 100%;
     margin: 0;
+    padding: 0;
 }
-  
+
 
 
 
@@ -16,7 +18,7 @@ svg text{
     font-size: 10px;
 }
 
-.tooltip {
+#line-plot .tooltip, #pcp-plot .tooltip {
     position: absolute;
     text-align: center;
     width: auto;
@@ -29,11 +31,11 @@ svg text{
     opacity: 0;
 }
 
-path {
+
+#line-plot path, #pcp-plot path{
     fill: none;
     stroke-width: 1px;
 }
-
 
 
 
@@ -72,3 +74,7 @@ path {
 
 
 
+.container1 {
+    display: flex;
+    justify-content: space-around; 
+}

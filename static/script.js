@@ -12,8 +12,14 @@ function load_data(){
         timeSeriesPlot();
      })
      .then(function(){
+        drawWorldMap();
+     })
+     .then(function(){
         renderPCP();
      })
+
+
+     
 
 }
 load_data()
@@ -144,9 +150,9 @@ function timeSeriesPlot() {
         d.snapshot_date = parseDate(d.snapshot_date);
     });
 
-    var margin = { top: 5, right: 20, bottom: 50, left: 60 },
+    var margin = { top: 5, right: 20, bottom: 30, left: 60 },
         width = 630 - margin.left - margin.right,
-        height = 90 - margin.top - margin.bottom;
+        height = 60 - margin.top - margin.bottom;
 
     var svg = d3.select("#date-selector").append("svg")
         .attr("width", width + margin.left + margin.right)
@@ -227,6 +233,9 @@ function timeSeriesPlot() {
                lineChart();
             })
             .then(function(){
+                drawWorldMap();
+             })
+            .then(function(){
                 renderPCP();
              })
         )
@@ -234,6 +243,69 @@ function timeSeriesPlot() {
     }
 }
 
+
+
+
+function drawWorldMap() {
+    // Assuming main_response.country_frequency_dict is already parsed and accessible
+    const countryFrequencyData = main_response.country_frequency_dict;
+
+    d3.select("#world-map").select("svg").remove();
+
+    // Load and display the World Atlas TopoJSON
+    d3.json("https://d3js.org/world-110m.v1.json").then(function(world) {
+        const countries = topojson.feature(world, world.objects.countries).features;
+        const frequencies = countries.map(d => countryFrequencyData[d.id]?.frequency || 0);
+        const colorScale = d3.scaleSequential(d3.interpolateViridis)
+                             .domain([d3.min(frequencies), d3.max(frequencies)]);
+
+        const svg = d3.select("#world-map").append("svg")
+                      .attr("width", 750)
+                      .attr("height", 350);
+
+        const projection = d3.geoMercator()
+                             .scale(85)
+                             .translate([350, 250]);
+
+        const path = d3.geoPath().projection(projection);
+
+        const tooltip = d3.select("body").append("div")
+                          .attr("class", "tooltip")
+                          .style("position", "absolute")
+                          .style("visibility", "hidden")
+                          .style("background", "lightgrey")
+                          .style("border", "solid 1px black")
+                          .style("border-radius", "5px")
+                          .style("padding", "5px");
+
+        svg.selectAll("path")
+           .data(countries)
+           .enter().append("path")
+           .attr("d", path)
+           .attr("fill", d => {
+               const frequency = countryFrequencyData[d.id]?.frequency;
+               return frequency ? colorScale(frequency) : "#ccc";
+           })
+           .attr("stroke", "white")
+           .on("mouseover", function(event, d) {
+               const countryInfo = countryFrequencyData[d.id];
+
+               if (countryInfo) {
+                   tooltip.style("visibility", "visible")
+                          .html(`${countryInfo.country_name}: ${countryInfo.frequency}`)
+                          .style("top", `${event.pageY - 10}px`)
+                          .style("left", `${event.pageX + 10}px`);
+               }
+           })
+           .on("mouseout", function() {
+               tooltip.style("visibility", "hidden");
+           });
+
+        // Consider adding a legend here to explain the color scale
+    }).catch(function(error) {
+        console.error('Error loading or processing data:', error);
+    });
+}
 
 
 
@@ -267,7 +339,7 @@ function renderPCP() {
 
     // Define margins, width, and height for the plot area
     const margin = { top: 30, right: 10, bottom: 5, left: 5 }, // Increased left margin for axis labels
-        width = 800 - margin.left - margin.right,
+        width = 780 - margin.left - margin.right,
         height = 300 - margin.top - margin.bottom;
 
     // Append SVG and a group element to the DOM
