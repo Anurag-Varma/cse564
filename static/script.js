@@ -250,7 +250,6 @@ function drawWorldMap() {
     // Assuming main_response.country_frequency_dict is already parsed and accessible
     const countryFrequencyData = main_response.country_frequency_dict;
 
-    d3.select("#world-map").select("svg").remove();
 
     // Load and display the World Atlas TopoJSON
     d3.json("https://d3js.org/world-110m.v1.json").then(function(world) {
@@ -259,6 +258,7 @@ function drawWorldMap() {
         const colorScale = d3.scaleSequential(d3.interpolateViridis)
                              .domain([d3.min(frequencies), d3.max(frequencies)]);
 
+        d3.select("#world-map").select("svg").remove();
         const svg = d3.select("#world-map").append("svg")
                       .attr("width", 750)
                       .attr("height", 350);

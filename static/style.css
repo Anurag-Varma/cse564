@@ -78,3 +78,7 @@ svg text{
     display: flex;
     justify-content: space-around; 
 }
+
+.container1 > div {
+    flex: 1;                 /* Each child div will take equal space */
+}
