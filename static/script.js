@@ -67,20 +67,51 @@ function lineChart() {
     });
 
     x.domain(d3.extent(songData, function(d) { return d.snapshot_date; }));
+
     y.domain([
-        d3.min(songs, function(c) { return d3.min(c.values, function(v) { return v.frequency; }); }),
+        0,
         d3.max(songs, function(c) { return d3.max(c.values, function(v) { return v.frequency; }); })
     ]);
+    
+    // Function to decide the number of ticks based on the time range
+    function adjustTickInterval(startDate, endDate) {
+        const totalDays = (endDate - startDate) / (1000 * 3600 * 24);
+    
+        if (totalDays <= 10) {
+            return d3.timeDay.every(1);
+        } 
+        else if (totalDays <= 20) {
+            return d3.timeDay.every(2);
+        } else if (totalDays <= 90) {
+            return d3.timeWeek.every(1);
+        } else if (totalDays <= 365) {
+            return d3.timeMonth.every(1);
+        } 
+    }
+    
+    const xAxisTicks = adjustTickInterval(x.domain()[0], x.domain()[1]);
+    
 
+    
+    var transform=null
     svg.append("g")
-        .attr("class", "x axis")
-        .attr("transform", "translate(0," + height + ")")
-        .call(d3.axisBottom(x).ticks(d3.timeWeek.every(1)).tickFormat(d3.timeFormat("%m-%d")))
-        .selectAll("text")
-        .style("text-anchor", "end")
-        .attr("dx", "1em")
-        .attr("dy", ".85em")
-        .attr("transform", "rotate(0)");
+    .attr("class", "x axis")
+    .attr("transform", "translate(0," + height + ")")
+    .call(d3.axisBottom(x).ticks(xAxisTicks).tickFormat(d3.timeFormat("%m-%d")))
+    .selectAll(".tick")  // Select all ticks
+    .each(function(d) {  // 'd' is the date object bound to the tick
+            if (transform==null){
+                transform = d3.select(this).attr("transform");
+                transform = transform.substring(transform.indexOf("(") + 1, transform.indexOf(","));
+            }
+            newTransform=d3.select(this).attr("transform");
+            newTransform = newTransform.substring(newTransform.indexOf("(") + 1, newTransform.indexOf(","));
+
+            d3.select(this).attr("transform", "translate("+(newTransform-transform)+", 0)");  
+        
+    })
+    
+  
 
     svg.append("g")
         .attr("class", "y axis")
@@ -255,8 +286,8 @@ function drawWorldMap() {
     d3.json("https://d3js.org/world-110m.v1.json").then(function(world) {
         const countries = topojson.feature(world, world.objects.countries).features;
         const frequencies = countries.map(d => countryFrequencyData[d.id]?.frequency || 0);
-        const colorScale = d3.scaleSequential(d3.interpolateViridis)
-                             .domain([d3.min(frequencies), d3.max(frequencies)]);
+        const colorScale = d3.scaleSequential(d3.interpolatePlasma )
+                             .domain([d3.max(frequencies), d3.min(frequencies)]);
 
         d3.select("#world-map").select("svg").remove();
         const svg = d3.select("#world-map").append("svg")

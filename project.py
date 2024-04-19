@@ -2,6 +2,9 @@ from flask import Flask, render_template, jsonify, request
 import pandas as pd
 import numpy as np
 import pycountry
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 
 app = Flask(__name__)
 
@@ -24,7 +27,7 @@ def readdata():
     end_date = df['snapshot_date'].max()
     fixed_start_date = start_date
     fixed_end_date = end_date
-    return df.sample(n=10000)
+    return df
 
 @app.route("/data")
 def mainfunc():
@@ -39,8 +42,20 @@ def mainfunc():
     top_10_songs_overall = filtered_sample['name'].value_counts().head(10).index.tolist()
     top_10_songs_data = filtered_sample[filtered_sample['name'].isin(top_10_songs_overall)]
 
+
+    number_of_days = end_date - start_date
+    
+    freq="number_of_days"
+
+    if number_of_days.days <= 20:
+        freq="D"
+    elif number_of_days.days <= 90:
+        freq="W"
+    elif number_of_days.days <= 365:
+        freq="M"
+
     # Group by week and by song name, then count occurrences
-    song_frequency_over_time = top_10_songs_data.groupby([pd.Grouper(key='snapshot_date', freq='W'), 'name'])['country'].count().unstack(fill_value=0)
+    song_frequency_over_time = top_10_songs_data.groupby([pd.Grouper(key='snapshot_date', freq=freq), 'name'])['country'].count().unstack(fill_value=0)
     song_frequency_over_time.reset_index(inplace=True)
     song_frequency_over_time['snapshot_date'] = song_frequency_over_time['snapshot_date'].dt.strftime('%Y-%m-%d')
     song_frequency_over_time_json = song_frequency_over_time.to_json(orient='records')
@@ -55,9 +70,36 @@ def mainfunc():
     pcp_data_json = pcp_data.to_json(orient='records')
 
 
-    # Count the frequency of each country
-    country_counts = filtered_sample['country'].value_counts().reset_index()
-    country_counts.columns = ['country', 'frequency']
+    world_filtered_data = pd.read_csv("world_filtered_data.csv", index_col=False)
+    world_filtered_data['snapshot_date'] = pd.to_datetime(world_filtered_data['snapshot_date'])
+
+    world_filtered_data=world_filtered_data[(world_filtered_data['snapshot_date'] >= start_date) & (world_filtered_data['snapshot_date'] <= end_date)]
+
+
+    # Filter to obtain the top 50 songs per day globally
+    world_top_50_daily = world_filtered_data.groupby('snapshot_date').apply(
+        lambda x: x.nsmallest(50, 'daily_rank')
+    ).reset_index(drop=True)
+
+
+
+    merged_data = pd.merge(
+        world_top_50_daily[['name', 'snapshot_date']],
+        filtered_sample[['name', 'snapshot_date', 'country']],
+        on=['name', 'snapshot_date'],
+        how='inner'
+    )
+
+    # Count the number of matching songs per country per day
+    country_matches = merged_data.groupby(['snapshot_date', 'country']).size().unstack(fill_value=0)
+
+    # Calculate the average number of matching songs per country
+    average_matches = country_matches.mean().sort_values(ascending=False).to_frame(name='frequency')
+
+    final_results = average_matches.reset_index()
+    final_results.columns = ['country', 'frequency']
+
+    country_counts = final_results
 
     # Mapping alpha-2 country codes to country names
     country_counts['country_name'] = country_counts['country'].apply(
