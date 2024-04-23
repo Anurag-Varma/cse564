@@ -20,10 +20,6 @@ function load_data(){
      .then(function(){
         drawSunburst();
      })
-
-
-     
-
 }
 load_data()
 
@@ -131,6 +127,7 @@ function lineChart() {
             d3.selectAll(".line").filter(function() {
                 return this !== selected;
             }).classed("faded", true);
+            d3.selectAll(".line").classed("highlight", false)
             d3.select(this).classed("highlight", true).classed("faded", false);
         }
     };
@@ -171,6 +168,10 @@ function lineChart() {
                      .then(function(){
                         renderPCP();
                      })
+                     .then(function(){
+                        drawSunburst();
+                     })
+                     
                 )
                 .catch((error) => {
                     console.error('Error:', error);
@@ -223,6 +224,9 @@ function lineChart() {
                      })
                      .then(function(){
                         renderPCP();
+                     })
+                     .then(function(){
+                        drawSunburst();
                      })
                 )
                 .catch((error) => {
@@ -365,6 +369,9 @@ function timeSeriesPlot() {
             .then(function(){
                 renderPCP();
              })
+             .then(function(){
+                drawSunburst();
+             })
         )
           .catch((error) => console.error('Error:', error));
     }
@@ -435,9 +442,9 @@ function drawWorldMap() {
 }
 
 function drawSunburst() {
-    const width = 300;
+    const width = 325;
     const height = width;
-    const radius = width / 15;
+    const radius = width / 6;
 
     // Access the JSON data directly without parsing
     const data = main_response.genre_data;
@@ -468,11 +475,15 @@ function drawSunburst() {
         .innerRadius(d => d.y0 * radius)
         .outerRadius(d => Math.max(d.y0 * radius, d.y1 * radius - 1));
 
+    d3.select("#sunburst-chart").select("svg").remove();
+
     // Create the SVG container for the sunburst chart
     const svg = d3.select("#sunburst-chart").selectAll("svg").data([null]);
     const svgEnter = svg.enter().append("svg")
         .merge(svg)
         .attr("viewBox", [-width / 2, -height / 2, width, height])
+        .attr("width", width)
+        .attr("height", height)
         .style("font", "8px sans-serif");
 
     // Append the arcs to the sunburst chart
@@ -499,9 +510,9 @@ function drawSunburst() {
         .text(function(d) {
             // Display the full label or abbreviate if it's too long
             const text = d.data.name;
-            return text.length <= 5 ? text : `${text.substring(0, 5)}`;  // Use ellipsis character
+            return text.length <= 6 ? text : `${text.substring(0, 6)}`;  // Use ellipsis character
         })
-        .style("font-size", "5px");
+        .style("font-size", "12px");
 
     // Function to determine whether the arc is visible (used in opacity calculation)
     function arcVisible(d) {
@@ -553,7 +564,7 @@ function renderPCP() {
     // Define margins, width, and height for the plot area
     const margin = { top: 30, right: 10, bottom: 5, left: 5 }, // Increased left margin for axis labels
         width = 780 - margin.left - margin.right,
-        height = 300 - margin.top - margin.bottom;
+        height = 325 - margin.top - margin.bottom;
 
     // Append SVG and a group element to the DOM
     const svg = d3.select("#pcp-plot")
