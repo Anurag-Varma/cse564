@@ -17,6 +17,9 @@ function load_data(){
      .then(function(){
         renderPCP();
      })
+     .then(function(){
+        drawSunburst();
+     })
 
 
      
@@ -338,6 +341,92 @@ function drawWorldMap() {
     });
 }
 
+function drawSunburst() {
+    const width = 300;
+    const height = width;
+    const radius = width / 15;
+
+    // Access the JSON data directly without parsing
+    const data = main_response.genre_data;
+
+    const color = d3.scaleOrdinal(d3.quantize(d3.interpolateRainbow, data.children.length + 1));
+
+    // Scales and formats
+    const format = d3.format(",d");
+
+    // Partition data to create a sunburst layout
+    const partition = data => {
+        const root = d3.hierarchy(data)
+            .sum(d => d.value)
+            .sort((a, b) => b.value - a.value);
+        return d3.partition()
+            .size([2 * Math.PI, root.height + 1])
+            (root);
+    };
+
+    // Compute the sunburst layout
+    const root = partition(main_response.genre_data);
+
+    // Arc generator
+    const arc = d3.arc()
+        .startAngle(d => d.x0)
+        .endAngle(d => d.x1)
+        .padAngle(0.005)  // Minimal pad angle for separation between arcs
+        .innerRadius(d => d.y0 * radius)
+        .outerRadius(d => Math.max(d.y0 * radius, d.y1 * radius - 1));
+
+    // Create the SVG container for the sunburst chart
+    const svg = d3.select("#sunburst-chart").selectAll("svg").data([null]);
+    const svgEnter = svg.enter().append("svg")
+        .merge(svg)
+        .attr("viewBox", [-width / 2, -height / 2, width, height])
+        .style("font", "8px sans-serif");
+
+    // Append the arcs to the sunburst chart
+    const path = svgEnter.append("g")
+        .selectAll("path")
+        .data(root.descendants().slice(1))
+        .enter().append("path")
+        .attr("fill", d => { while (d.depth > 1) d = d.parent; return color(d.data.name); })
+        .attr("d", arc);
+
+    // Add labels to the arcs, if there is enough space
+    svgEnter.append("g")
+        .attr("pointer-events", "none")
+        .attr("text-anchor", "middle")
+        .style("user-select", "none")
+        .selectAll("text")
+        .data(root.descendants().filter(d => d.depth && (d.y1 - d.y0) * (d.x1 - d.x0) > 0.03))  // Filter for space
+        .enter().append("text")
+        .attr("transform", function(d) {
+            const x = (d.x0 + d.x1) / 2 * 180 / Math.PI;
+            const y = (d.y0 + d.y1) / 2 * radius;
+            return `rotate(${x - 90}) translate(${y},0) rotate(${x < 180 ? 0 : 180})`;
+        })
+        .text(function(d) {
+            // Display the full label or abbreviate if it's too long
+            const text = d.data.name;
+            return text.length <= 5 ? text : `${text.substring(0, 5)}`;  // Use ellipsis character
+        })
+        .style("font-size", "5px");
+
+    // Function to determine whether the arc is visible (used in opacity calculation)
+    function arcVisible(d) {
+        return d.y1 <= 3 && d.y0 >= 1 && d.x1 > d.x0;
+    }
+
+    // Function to determine whether the label is visible
+    function labelVisible(d) {
+        return d.y1 <= 3 && d.y0 >= 1 && (d.y1 - d.y0) * (d.x1 - d.x0) > 0.03;
+    }
+
+    // Function to transform the label's position
+    function labelTransform(d) {
+        const x = (d.x0 + d.x1) / 2 * 180 / Math.PI;
+        const y = (d.y0 + d.y1) / 2 * radius;
+        return `rotate(${x - 90}) translate(${y},0) rotate(${x < 180 ? 0 : 180})`;
+    }
+}
 
 
 

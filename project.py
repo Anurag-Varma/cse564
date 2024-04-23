@@ -116,6 +116,18 @@ def mainfunc():
 
     # Convert the cleaned country counts to a dictionary format that includes country name, numeric code, and frequency
     country_frequency_dict = country_counts_cleaned.set_index('country_number').to_dict('index')    
+    
+    # Creating a hierarchy of genres and subgenres
+    genre_value_counts = filtered_sample['genre'].value_counts()
+    top_genres = genre_value_counts.nlargest(5).index
+
+    genre_hierarchy = {'name': 'root', 'children': []}
+    for genre, group in filtered_sample.groupby('genre'):
+        if genre in top_genres:
+            genre_node = {'name': genre, 'children': []}
+            for sub_genre, subgroup in group.groupby('sub_genre'):
+                genre_node['children'].append({'name': sub_genre, 'value': subgroup.shape[0]})
+            genre_hierarchy['children'].append(genre_node)
 
     # Return JSON data for the client side
     return jsonify({
@@ -123,7 +135,8 @@ def mainfunc():
         "song_frequency_over_time": song_frequency_over_time_json,
         "fixed_start_date":fixed_start_date,
         "fixed_end_date": fixed_end_date,
-        "country_frequency_dict":country_frequency_dict
+        "country_frequency_dict":country_frequency_dict,
+        "genre_data":genre_hierarchy
     })
 
 @app.route('/update-date-range', methods=['POST'])

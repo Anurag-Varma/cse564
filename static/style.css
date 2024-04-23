@@ -82,3 +82,15 @@ svg text{
 .container1 > div {
     flex: 1;                 /* Each child div will take equal space */
 }
+
+.container2 {
+    display: flex; /* Use flexbox layout */
+    justify-content: center; /* Center the items on the page */
+    align-items: flex-start; /* Align items at the top */
+}
+
+.container2 > div {
+    flex: 1;                 /* Each child div will take equal space */
+}
+
+
