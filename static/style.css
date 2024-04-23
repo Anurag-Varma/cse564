@@ -58,17 +58,15 @@ svg text{
     stroke-opacity: 1;
 }
 
-.text {
+.legend-entry text {
     transition: fill-opacity 0.5s;
 }
 
-.text.faded {
-    fill-opacity: 0.2;
+.legend-entry.faded {
+    fill-opacity: 0.1;
 }
 
-.text.highlight {
-    fill: #000;
-    font-weight: bold;
+.legend-entry.highlight {
     fill-opacity: 1;
 }
 
