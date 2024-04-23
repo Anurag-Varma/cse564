@@ -346,6 +346,17 @@ function timeSeriesPlot() {
 
     // Function to send data to Flask
     function sendDateRangeToFlask(startDate, endDate) {
+        if (selectedPath)
+        {
+            selectedPath.classed("selected", false).classed("faded", false);
+            d3.selectAll(".line").classed("faded", false);
+            selectedPath = null;
+
+            // Highlight corresponding legend entry
+            d3.selectAll(".legend-entry").classed("highlight", false); // Deselect all legend texts
+            d3.selectAll(".legend-entry").classed("faded", false);
+        }
+
         fetch('/update-date-range', {
             method: 'POST',
             headers: {
@@ -356,23 +367,22 @@ function timeSeriesPlot() {
                 end_date: endDate.toISOString().slice(0, 10)
             })
         }).then(response => response.json())
-          .then(
-            d3.json("/data").then(function(response) {
-                main_response=response;
-            })
-            .then(function(){
-               lineChart();
-            })
-            .then(function(){
-                drawWorldMap();
-             })
-            .then(function(){
-                renderPCP();
-             })
-             .then(function(){
-                drawSunburst();
-             })
-        )
+          .then(d3.json("/data").then(function(response) {
+                    main_response=response;
+                })
+                .then(function(){
+                    lineChart();
+                })             
+                .then(function(){
+                    drawWorldMap();
+                })
+                .then(function(){
+                    renderPCP();
+                })
+                .then(function(){
+                    drawSunburst();
+                })
+          ) 
           .catch((error) => console.error('Error:', error));
     }
 }
@@ -383,7 +393,6 @@ function timeSeriesPlot() {
 function drawWorldMap() {
     // Assuming main_response.country_frequency_dict is already parsed and accessible
     const countryFrequencyData = main_response.country_frequency_dict;
-
 
     // Load and display the World Atlas TopoJSON
     d3.json("https://d3js.org/world-110m.v1.json").then(function(world) {
@@ -403,6 +412,33 @@ function drawWorldMap() {
 
         const path = d3.geoPath().projection(projection);
 
+        svg.on("click", function(event) {
+            // Get the element that was clicked
+            const clickedElement = d3.select(event.target);
+        
+            // Check if the clicked element is one of the country paths
+            // Assuming country paths have a specific class 'country-path' or can be identified by nodeName
+            if (clickedElement.node().nodeName !== "path" || !clickedElement.classed("country-path")) {
+                // Only execute this block if the click was not on a country
+                fetch('/country_data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        country_code: "all",
+                    })
+                }).then(response => response.json())
+                  .then(() => d3.json("/data").then(function(response) {
+                      main_response = response;
+                  }).then(() => {
+                      drawSunburst();
+                  }))
+                  .catch(error => console.error('Error:', error));
+            }
+        });
+        
+
         const tooltip = d3.select("body").append("div")
                           .attr("class", "tooltip")
                           .style("position", "absolute")
@@ -415,6 +451,7 @@ function drawWorldMap() {
         svg.selectAll("path")
            .data(countries)
            .enter().append("path")
+           .attr("class", "country-path")
            .attr("d", path)
            .attr("fill", d => {
                const frequency = countryFrequencyData[d.id]?.frequency;
@@ -426,20 +463,45 @@ function drawWorldMap() {
 
                if (countryInfo) {
                    tooltip.style("visibility", "visible")
-                          .html(`${countryInfo.country_name}: ${countryInfo.frequency}`)
+                          .html(`${countryInfo.country_name}: ${parseFloat(countryInfo.frequency).toFixed(2)}`)
                           .style("top", `${event.pageY - 10}px`)
                           .style("left", `${event.pageX + 10}px`);
                }
            })
            .on("mouseout", function() {
                tooltip.style("visibility", "hidden");
-           });
+           })
+           .on("click", function(event, d) {
+                const countryInfo = countryFrequencyData[d.id];
+                if (countryInfo) {
+                    fetch('/country_data', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            country_code: countryInfo.country,
+                        })
+                    }).then(response => response.json())
+                    .then(
+                        d3.json("/data").then(function(response) {
+                            main_response=response;
+                        })
+                         .then(function(){
+                            drawSunburst();
+                         })
+                    )
+                    .catch(error => console.error('Error:', error));
+                }
+            });
 
         // Consider adding a legend here to explain the color scale
     }).catch(function(error) {
         console.error('Error loading or processing data:', error);
     });
 }
+
+
 
 function drawSunburst() {
     const width = 325;

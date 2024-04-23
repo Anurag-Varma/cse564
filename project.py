@@ -15,6 +15,7 @@ end_date = None
 fixed_start_date = None
 fixed_end_date = None
 songName = "all"
+countryCode = "all"
 
 @app.route("/")
 def index():
@@ -32,7 +33,7 @@ def readdata():
 
 @app.route("/data")
 def mainfunc():
-    global random_sample, start_date, end_date, fixed_start_date, fixed_end_date, songName
+    global random_sample, start_date, end_date, fixed_start_date, fixed_end_date, songName, countryCode
 
     if random_sample is None:
         random_sample = readdata()
@@ -135,18 +136,33 @@ def mainfunc():
  
  
     ############################### Sunburst Plot #########################################
-    
-    # Creating a hierarchy of genres and subgenres
-    genre_value_counts = filtered_sample['genre'].value_counts()
-    top_genres = genre_value_counts.nlargest(5).index
 
-    genre_hierarchy = {'name': 'root', 'children': []}
-    for genre, group in filtered_sample.groupby('genre'):
-        if genre in top_genres:
-            genre_node = {'name': genre, 'children': []}
-            for sub_genre, subgroup in group.groupby('sub_genre'):
-                genre_node['children'].append({'name': sub_genre, 'value': subgroup.shape[0]})
-            genre_hierarchy['children'].append(genre_node)
+    if countryCode=="all":        
+        # Creating a hierarchy of genres and subgenres
+        genre_value_counts = filtered_sample['genre'].value_counts()
+        top_genres = genre_value_counts.nlargest(5).index
+
+        genre_hierarchy = {'name': 'root', 'children': []}
+        for genre, group in filtered_sample.groupby('genre'):
+            if genre in top_genres:
+                genre_node = {'name': genre, 'children': []}
+                for sub_genre, subgroup in group.groupby('sub_genre'):
+                    genre_node['children'].append({'name': sub_genre, 'value': subgroup.shape[0]})
+                genre_hierarchy['children'].append(genre_node)
+    else:
+        sunBurst_sample = filtered_sample[filtered_sample["country"] == countryCode ]
+        
+        # Creating a hierarchy of genres and subgenres
+        genre_value_counts = sunBurst_sample['genre'].value_counts()
+        top_genres = genre_value_counts.nlargest(5).index
+
+        genre_hierarchy = {'name': 'root', 'children': []}
+        for genre, group in sunBurst_sample.groupby('genre'):
+            if genre in top_genres:
+                genre_node = {'name': genre, 'children': []}
+                for sub_genre, subgroup in group.groupby('sub_genre'):
+                    genre_node['children'].append({'name': sub_genre, 'value': subgroup.shape[0]})
+                genre_hierarchy['children'].append(genre_node)
             
     ############################### Sunburst Plot #########################################
 
@@ -163,12 +179,15 @@ def mainfunc():
 
 @app.route('/update-date-range', methods=['POST'])
 def update_date_range():
-    global random_sample, start_date, end_date
+    global random_sample, start_date, end_date, songName, countryCode
 
     if request.is_json:
         data = request.get_json()
         start_date = pd.to_datetime(data.get('start_date'))
         end_date = pd.to_datetime(data.get('end_date'))
+
+        songName = "all"
+        countryCode = "all"
 
         return jsonify({"status": "success", "message": "Date range updated successfully."}), 200
     else:
@@ -182,6 +201,21 @@ def handle_data():
     songName=data['songName']
 
     return jsonify({"status": "success", "message": "Data received"})
+
+@app.route('/country_data', methods=['POST'])
+def handle_country_click():
+    global countryCode
+    if request.is_json:
+        data = request.get_json()  # Extract JSON data from request
+        countryCode = data.get('country_code')
+
+        print(countryCode)
+
+        # Return a response to the client
+        return jsonify({"status": "success","message": "Data received successfully!"}), 200
+    else:
+        # If the request is not in JSON format, return an error
+        return jsonify({"status": "error","message": "Request body must be JSON"}), 400
 
 if __name__ == "__main__":
     app.run(debug=True)
