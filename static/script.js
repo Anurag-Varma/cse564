@@ -25,6 +25,7 @@ function load_data(){
 load_data()
 
 
+var selectedPath = null;  // Global variable to track the selected path
 
 function lineChart() {
     var svgWidth = 750, svgHeight = 270;
@@ -32,6 +33,7 @@ function lineChart() {
     var width = svgWidth - margin.left - margin.right;
     var height = svgHeight - margin.top - margin.bottom;
 
+    // Remove any existing SVG to avoid duplicates
     d3.select("#line-plot").select("svg").remove();
 
     var svg = d3.select("#line-plot").append("svg")
@@ -42,7 +44,6 @@ function lineChart() {
 
     var x = d3.scaleTime().range([0, width]);
     var y = d3.scaleLinear().range([height, 0]);
-
     var color = d3.scaleOrdinal(d3.schemeCategory10);
 
     var line = d3.line()
@@ -67,16 +68,15 @@ function lineChart() {
     });
 
     x.domain(d3.extent(songData, function(d) { return d.snapshot_date; }));
-
     y.domain([
         0,
         d3.max(songs, function(c) { return d3.max(c.values, function(v) { return v.frequency; }); })
     ]);
-    
-    // Function to decide the number of ticks based on the time range
-    function adjustTickInterval(startDate, endDate) {
+
+   // Function to decide the number of ticks based on the time range
+   function adjustTickInterval(startDate, endDate) {
         const totalDays = (endDate - startDate) / (1000 * 3600 * 24);
-    
+
         if (totalDays <= 10) {
             return d3.timeDay.every(1);
         } 
@@ -88,11 +88,11 @@ function lineChart() {
             return d3.timeMonth.every(1);
         } 
     }
-    
-    const xAxisTicks = adjustTickInterval(x.domain()[0], x.domain()[1]);
-    
 
-    
+    const xAxisTicks = adjustTickInterval(x.domain()[0], x.domain()[1]);
+
+
+
     var transform=null
     svg.append("g")
     .attr("class", "x axis")
@@ -110,39 +110,132 @@ function lineChart() {
             d3.select(this).attr("transform", "translate("+(newTransform-transform)+", 0)");  
         
     })
-    
-  
+
 
     svg.append("g")
         .attr("class", "y axis")
         .call(d3.axisLeft(y));
 
-        var song = svg.selectAll(".song")
+    // Drawing the lines for each song
+    var song = svg.selectAll(".song")
         .data(songs)
         .enter().append("g")
         .attr("class", "song");
 
-    var path = song.append("path")
-        .attr("class", "line")
-        .attr("d", function(d) { return line(d.values); })
-        .style("stroke", function(d) { return color(d.name); });
-
     var highlightElements = function() {
-        var selected = this;
-        d3.selectAll(".line").filter(function() {
-            return this !== selected;
-        }).classed("faded", true);
-        d3.select(this).classed("highlight", true).classed("faded", false);
+        if(! selectedPath) {
+            var selected = this;
+            d3.selectAll(".line").filter(function() {
+                return this !== selected;
+            }).classed("faded", true);
+            d3.select(this).classed("highlight", true).classed("faded", false);
+        }
     };
 
     var resetElements = function() {
-        d3.selectAll(".line").classed("faded", false).classed("highlight", false);
+        if(! selectedPath) {
+            d3.selectAll(".line").classed("faded", false).classed("highlight", false);
+        }
     };
 
-    path.on("mouseover", highlightElements)
+    song.append("path")
+        .attr("class", "line")
+        .attr("d", function(d) { return line(d.values); })
+        .style("stroke", function(d) { return color(d.name); })
+        .on("click", function(event, d) {
+            if(! selectedPath) {
+                var songDataToSend = {
+                    songName: d.name,
+                    values: d.values.map(v => ({date: v.date.toISOString(), frequency: v.frequency}))
+                };
+        
+                // Send data to Flask server
+                fetch('/update-selected-song', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(songDataToSend)
+                })
+                .then(response => response.json())
+                .then(
+                    d3.json("/data").then(function(response) {
+                        main_response=response;
+                    })
+                    .then(function(){
+                        drawWorldMap();
+                     })
+                     .then(function(){
+                        renderPCP();
+                     })
+                )
+                .catch((error) => {
+                    console.error('Error:', error);
+                });
+
+                // event.stopPropagation();  // Stop propagation to avoid background click event
+                if (selectedPath) {
+                    selectedPath.classed("selected", false);
+                }
+                selectedPath = d3.select(this).classed("selected", true);
+                d3.selectAll(".line").classed("faded", true);
+                selectedPath.classed("faded", false);
+
+                // Highlight corresponding legend entry
+                d3.selectAll(".legend-entry").classed("highlight", false); // Deselect all legend texts
+                d3.selectAll(".legend-entry").classed("faded", true);
+                d3.selectAll(".legend-entry").each(function(entry) {
+                    if (entry.name === d.name) {
+                        d3.select(this).classed("highlight", true); // Highlight the legend text corresponding to the selected path
+                    }
+                });
+            }
+        })
+        .on("mouseover", highlightElements)
         .on("mouseout", resetElements);
 
-    // Create a legend at the specified position
+    // Inserting a transparent rectangle to capture click events
+    svg.insert("rect", ":first-child")
+        .attr("class", "event-capture")
+        .attr("width", svgWidth)
+        .attr("height", svgHeight)
+        .attr("fill", "none")
+        .style("pointer-events", "all")
+        .on("click", function() {
+            if (selectedPath) {
+                fetch('/update-selected-song', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ songName: "all" })
+                })
+                .then(response => response.json())
+                .then(
+                    d3.json("/data").then(function(response) {
+                        main_response=response;
+                    })
+                    .then(function(){
+                        drawWorldMap();
+                     })
+                     .then(function(){
+                        renderPCP();
+                     })
+                )
+                .catch((error) => {
+                    console.error('Error on click:', error);
+                });
+                selectedPath.classed("selected", false).classed("faded", false);
+                d3.selectAll(".line").classed("faded", false);
+                selectedPath = null;
+
+                // Highlight corresponding legend entry
+                d3.selectAll(".legend-entry").classed("highlight", false); // Deselect all legend texts
+                d3.selectAll(".legend-entry").classed("faded", false);
+            }
+        });
+
+    // Creating a legend
     var legend = svg.append("g")
         .attr("class", "legend")
         .attr("transform", "translate(" + (width + 5) + ",10)");
