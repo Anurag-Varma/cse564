@@ -165,6 +165,24 @@ def mainfunc():
                 genre_hierarchy['children'].append(genre_node)
             
     ############################### Sunburst Plot #########################################
+    
+    
+    ############################### Word Cloud Plot #########################################
+    
+    # Split and flatten the artists column
+    artists_list = filtered_sample['artists'].str.split(', ').str[0].str.strip()
+
+    # Count occurrences of each artist
+    top_artists_count = artists_list.value_counts().head(20).reset_index()
+    top_artists_count.columns = ['artist', 'count']
+
+    # Convert to JSON
+    top_artists_json = top_artists_count.to_json(orient='records')
+    
+    
+    
+    
+    ############################### Word Cloud Plot #########################################    
 
 
     # Return JSON data for the client side
@@ -174,7 +192,8 @@ def mainfunc():
         "fixed_start_date":fixed_start_date,
         "fixed_end_date": fixed_end_date,
         "country_frequency_dict":country_frequency_dict,
-        "genre_data":genre_hierarchy
+        "genre_data":genre_hierarchy,
+        "top_artists":top_artists_json
     })
 
 @app.route('/update-date-range', methods=['POST'])

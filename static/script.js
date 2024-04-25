@@ -20,6 +20,9 @@ function load_data(){
      .then(function(){
         drawSunburst();
      })
+     .then(function(){
+        drawWordCloud();
+     })
 }
 load_data()
 
@@ -381,6 +384,9 @@ function timeSeriesPlot() {
                 })
                 .then(function(){
                     drawSunburst();
+                })
+                .then(function(){
+                    drawWordCloud();
                 })
           ) 
           .catch((error) => console.error('Error:', error));
@@ -835,3 +841,60 @@ function renderPCP() {
         return nextIndex;
     }
 }
+
+function drawWordCloud() {
+    
+    const topArtistsData = JSON.parse(main_response.top_artists);
+
+    // Extract counts from topArtistsData
+    const counts = topArtistsData.map(d => d.count);
+
+    // Calculate min and max counts
+    const minCount = Math.min(...counts);
+    const maxCount = Math.max(...counts);
+
+    // Convert counts to array of objects for word cloud data
+    const wordCloudData = topArtistsData.map(d => ({
+        text: d.artist,
+        size: d.count  // Use count directly as the size
+    }));
+
+    console.log(wordCloudData);
+
+    // Set up the font size scale based on min and max counts
+    const fontSizeScale = d3.scaleLinear()
+        .domain([minCount, maxCount])
+        .range([10, 40]);  // Set the range of font sizes you want
+
+    // Set up the word cloud layout
+    const layout = d3.layout.cloud()
+        .size([425, 300])  // Set the size of the word cloud area
+        .words(wordCloudData)
+        .padding(5)
+        .rotate(() => ~~(Math.random() * 2) * 90)
+        .fontSize(d => fontSizeScale(d.size))
+        .on("end", draw);
+
+    // Generate the word cloud
+    layout.start();
+
+    // Function to draw the word cloud
+    function draw(words) {
+        d3.select("#word-cloud").select("svg").remove();  // Remove existing SVG
+        const svg = d3.select("#word-cloud").append("svg")
+            .attr("width", layout.size()[0])
+            .attr("height", layout.size()[1])
+            .append("g")
+            .attr("transform", "translate(" + layout.size()[0] / 2 + "," + layout.size()[1] / 2 + ")");
+
+        svg.selectAll("text")
+            .data(words)
+            .enter().append("text")
+            .style("font-size", d => d.size + "px")
+            .style("fill", (d, i) => d3.schemeCategory10[i % 10])  // Use color scheme for text
+            .attr("text-anchor", "middle")
+            .attr("transform", d => "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")")
+            .text(d => d.text);
+    }
+}
+
