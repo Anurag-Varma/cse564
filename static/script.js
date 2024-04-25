@@ -631,7 +631,7 @@ function renderPCP() {
 
     // Define margins, width, and height for the plot area
     const margin = { top: 30, right: 10, bottom: 5, left: 5 }, // Increased left margin for axis labels
-        width = 780 - margin.left - margin.right,
+        width = 700 - margin.left - margin.right,
         height = 325 - margin.top - margin.bottom;
 
     // Append SVG and a group element to the DOM
@@ -859,16 +859,16 @@ function drawWordCloud() {
         size: d.count  // Use count directly as the size
     }));
 
-    console.log(wordCloudData);
-
     // Set up the font size scale based on min and max counts
     const fontSizeScale = d3.scaleLinear()
         .domain([minCount, maxCount])
         .range([10, 40]);  // Set the range of font sizes you want
 
+    Math.seedrandom('your_seed_here');
+
     // Set up the word cloud layout
     const layout = d3.layout.cloud()
-        .size([425, 300])  // Set the size of the word cloud area
+        .size([480, 325])  // Set the size of the word cloud area
         .words(wordCloudData)
         .padding(5)
         .rotate(() => ~~(Math.random() * 2) * 90)

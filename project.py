@@ -179,9 +179,6 @@ def mainfunc():
     # Convert to JSON
     top_artists_json = top_artists_count.to_json(orient='records')
     
-    
-    
-    
     ############################### Word Cloud Plot #########################################    
 
 
