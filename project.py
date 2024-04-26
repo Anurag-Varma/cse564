@@ -169,15 +169,28 @@ def mainfunc():
     
     ############################### Word Cloud Plot #########################################
     
-    # Split and flatten the artists column
-    artists_list = filtered_sample['artists'].str.split(', ').str[0].str.strip()
+    if countryCode=="all":     
+        # Split and flatten the artists column
+        artists_list = filtered_sample['artists'].str.split(', ').str[0].str.strip()
 
-    # Count occurrences of each artist
-    top_artists_count = artists_list.value_counts().head(20).reset_index()
-    top_artists_count.columns = ['artist', 'count']
+        # Count occurrences of each artist
+        top_artists_count = artists_list.value_counts().head(20).reset_index()
+        top_artists_count.columns = ['artist', 'count']
 
-    # Convert to JSON
-    top_artists_json = top_artists_count.to_json(orient='records')
+        # Convert to JSON
+        top_artists_json = top_artists_count.to_json(orient='records')
+    else:
+        wordCloud_sample = filtered_sample[filtered_sample["country"] == countryCode ]
+
+        # Split and flatten the artists column
+        artists_list = wordCloud_sample['artists'].str.split(', ').str[0].str.strip()
+
+        # Count occurrences of each artist
+        top_artists_count = artists_list.value_counts().head(20).reset_index()
+        top_artists_count.columns = ['artist', 'count']
+
+        # Convert to JSON
+        top_artists_json = top_artists_count.to_json(orient='records')
     
     ############################### Word Cloud Plot #########################################    
 
@@ -224,8 +237,6 @@ def handle_country_click():
     if request.is_json:
         data = request.get_json()  # Extract JSON data from request
         countryCode = data.get('country_code')
-
-        print(countryCode)
 
         # Return a response to the client
         return jsonify({"status": "success","message": "Data received successfully!"}), 200

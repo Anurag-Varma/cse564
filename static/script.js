@@ -496,6 +496,9 @@ function drawWorldMap() {
                          .then(function(){
                             drawSunburst();
                          })
+                         .then(function(){
+                            drawWordCloud();
+                         })
                     )
                     .catch(error => console.error('Error:', error));
                 }
