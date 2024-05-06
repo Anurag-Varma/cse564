@@ -566,34 +566,30 @@ function drawSunburst() {
         .attr("d", arc);
 
     // Add labels to the arcs, if there is enough space
-    svgEnter.append("g")
+    const labelGroup = svgEnter.append("g")
         .attr("pointer-events", "none")
         .attr("text-anchor", "middle")
         .style("user-select", "none")
-        .selectAll("text")
+        .selectAll("g")
         .data(root.descendants().filter(d => d.depth && (d.y1 - d.y0) * (d.x1 - d.x0) > 0.03))  // Filter for space
-        .enter().append("text")
-        .attr("transform", function(d) {
-            const x = (d.x0 + d.x1) / 2 * 180 / Math.PI;
-            const y = (d.y0 + d.y1) / 2 * radius;
-            return `rotate(${x - 90}) translate(${y},0) rotate(${x < 180 ? 0 : 180})`;
-        })
+        .enter().append("g")
+        .attr("transform", labelTransform);
+
+    labelGroup.append("text")
         .text(function(d) {
-            // Display the full label or abbreviate if it's too long
             const text = d.data.name;
             return text.length <= 6 ? text : `${text.substring(0, 6)}`;  // Use ellipsis character
         })
+        .attr("dy", "0.35em")
         .style("font-size", "12px");
 
-    // Function to determine whether the arc is visible (used in opacity calculation)
-    function arcVisible(d) {
-        return d.y1 <= 3 && d.y0 >= 1 && d.x1 > d.x0;
-    }
-
-    // Function to determine whether the label is visible
-    function labelVisible(d) {
-        return d.y1 <= 3 && d.y0 >= 1 && (d.y1 - d.y0) * (d.x1 - d.x0) > 0.03;
-    }
+    labelGroup.append("text")
+        .text(d => {
+            const percentage = ((d.x1 - d.x0) / (2 * Math.PI) * 100).toFixed(2);
+            return `(${percentage}%)`;
+        })
+        .attr("dy", "1.5em")
+        .style("font-size", "9px");
 
     // Function to transform the label's position
     function labelTransform(d) {
@@ -602,7 +598,6 @@ function drawSunburst() {
         return `rotate(${x - 90}) translate(${y},0) rotate(${x < 180 ? 0 : 180})`;
     }
 }
-
 
 
 
