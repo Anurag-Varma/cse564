@@ -45,7 +45,7 @@ def mainfunc():
     top_10_songs_overall = filtered_sample['name'].value_counts().head(10).index.tolist()
     top_10_songs_data = filtered_sample[filtered_sample['name'].isin(top_10_songs_overall)]
 
-    number_of_days = end_date - start_date
+    number_of_days = end_date - start_date # type: ignore
     
     freq="number_of_days"
 
@@ -109,7 +109,7 @@ def mainfunc():
     country_matches = merged_data.groupby(['snapshot_date', 'country']).size().unstack(fill_value=0)
 
     # Calculate the average number of matching songs per country
-    average_matches = country_matches.mean().sort_values(ascending=False).to_frame(name='frequency')
+    average_matches = country_matches.mean().sort_values(ascending=False).to_frame(name='frequency') # type: ignore
 
     final_results = average_matches.reset_index()
     final_results.columns = ['country', 'frequency']
@@ -118,12 +118,12 @@ def mainfunc():
 
     # Mapping alpha-2 country codes to country names
     country_counts['country_name'] = country_counts['country'].apply(
-        lambda x: pycountry.countries.get(alpha_2=x).name if pycountry.countries.get(alpha_2=x) else None
+        lambda x: pycountry.countries.get(alpha_2=x).name if pycountry.countries.get(alpha_2=x) else None # type: ignore
     )
 
     # Mapping alpha-2 country codes to numeric country codes
     country_counts['country_number'] = country_counts['country'].apply(
-        lambda x: pycountry.countries.get(alpha_2=x).numeric if pycountry.countries.get(alpha_2=x) else None
+        lambda x: pycountry.countries.get(alpha_2=x).numeric if pycountry.countries.get(alpha_2=x) else None # type: ignore
     )
 
     # Remove rows with no country name or number code
@@ -227,7 +227,7 @@ def handle_data():
     global songName
     
     data = request.json
-    songName=data['songName']
+    songName=data['songName'] # type: ignore
 
     return jsonify({"status": "success", "message": "Data received"})
 

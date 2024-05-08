@@ -172,6 +172,7 @@ function lineChart() {
                         renderPCP();
                      })
                      .then(function(){
+                        d3.select("#sunburst-chart").select("svg").remove();
                         drawSunburst();
                      })
                      
@@ -517,38 +518,27 @@ function drawSunburst() {
     const height = width;
     const radius = width / 6;
 
-    // Access the JSON data directly without parsing
     const data = main_response.genre_data;
-
     const color = d3.scaleOrdinal(d3.quantize(d3.interpolateRainbow, data.children.length + 1));
 
-    // Scales and formats
-    const format = d3.format(",d");
+    const hierarchy = d3.hierarchy(data)
+        .sum(d => d.value)
+        .sort((a, b) => b.value - a.value);
+    const root = d3.partition()
+        .size([2 * Math.PI, hierarchy.height + 1])
+    (hierarchy);
+    root.each(d => d.current = d);
 
-    // Partition data to create a sunburst layout
-    const partition = data => {
-        const root = d3.hierarchy(data)
-            .sum(d => d.value)
-            .sort((a, b) => b.value - a.value);
-        return d3.partition()
-            .size([2 * Math.PI, root.height + 1])
-            (root);
-    };
-
-    // Compute the sunburst layout
-    const root = partition(main_response.genre_data);
-
-    // Arc generator
     const arc = d3.arc()
         .startAngle(d => d.x0)
         .endAngle(d => d.x1)
-        .padAngle(0.005)  // Minimal pad angle for separation between arcs
+        .padAngle(d => Math.min((d.x1 - d.x0) / 2, 0.005))
+        .padRadius(radius * 1.5)
         .innerRadius(d => d.y0 * radius)
         .outerRadius(d => Math.max(d.y0 * radius, d.y1 * radius - 1));
 
     d3.select("#sunburst-chart").select("svg").remove();
 
-    // Create the SVG container for the sunburst chart
     const svg = d3.select("#sunburst-chart").selectAll("svg").data([null]);
     const svgEnter = svg.enter().append("svg")
         .merge(svg)
@@ -557,47 +547,114 @@ function drawSunburst() {
         .attr("height", height)
         .style("font", "8px sans-serif");
 
-    // Append the arcs to the sunburst chart
     const path = svgEnter.append("g")
         .selectAll("path")
         .data(root.descendants().slice(1))
-        .enter().append("path")
-        .attr("fill", d => { while (d.depth > 1) d = d.parent; return color(d.data.name); })
-        .attr("d", arc);
+        .join("path")
+          .attr("fill", d => { while (d.depth > 1) d = d.parent; return color(d.data.name); })
+          .attr("fill-opacity", d => arcVisible(d.current) ? (d.children ? 0.6 : 0.4) : 0)
+          .attr("pointer-events", d => arcVisible(d.current) ? "auto" : "none")
+          .attr("d", d => arc(d.current));
 
-    // Add labels to the arcs, if there is enough space
+    // Make them clickable if they have children.
+    path.filter(d => d.children)
+    .style("cursor", "pointer")
+    .on("click", clicked);
+
+    const format = d3.format(",d");
+    path.append("title")
+    .text(d => `${d.ancestors().map(d => d.data.name).reverse().join("/")}\n${format(d.value)}`);
+
     const labelGroup = svgEnter.append("g")
-        .attr("pointer-events", "none")
-        .attr("text-anchor", "middle")
-        .style("user-select", "none")
-        .selectAll("g")
-        .data(root.descendants().filter(d => d.depth && (d.y1 - d.y0) * (d.x1 - d.x0) > 0.03))  // Filter for space
-        .enter().append("g")
-        .attr("transform", labelTransform);
+    .attr("pointer-events", "none")
+    .attr("text-anchor", "middle")
+    .style("user-select", "none")
+    .selectAll("text")
+    .data(root.descendants().slice(1))
+    .join("text")
+    .attr("fill-opacity", d => +labelVisible(d.current))
+    .attr("transform", d => labelTransform(d.current))
+    .each(function(d) {
+        const text = d.data.name;
+        const shortenedText = text.length <= 10 ? text : `${text.substring(0, 10)}`;
+        const percentage = ((d.x1 - d.x0) / (2 * Math.PI) * 100).toFixed(2);
+        d3.select(this).append("tspan")
+            .text(shortenedText)
+            .attr("x", 0)
+            .attr("dy", "0.35em");
+        d3.select(this).append("tspan")
+            .text(`(${percentage}%)`)
+            .attr("x", 0)
+            .attr("dy", "1.2em");
+    });
 
-    labelGroup.append("text")
-        .text(function(d) {
-            const text = d.data.name;
-            return text.length <= 6 ? text : `${text.substring(0, 6)}`;  // Use ellipsis character
-        })
-        .attr("dy", "0.35em")
-        .style("font-size", "12px");
+    const parent = svgEnter.append("circle")
+    .datum(root)
+    .attr("r", radius)
+    .attr("fill", "none")
+    .attr("pointer-events", "all")
+    .on("click", clicked);
 
-    labelGroup.append("text")
-        .text(d => {
-            const percentage = ((d.x1 - d.x0) / (2 * Math.PI) * 100).toFixed(2);
-            return `(${percentage}%)`;
-        })
-        .attr("dy", "1.5em")
-        .style("font-size", "9px");
+    // labelGroup.append("text")
+    //     .text(d => {
+    //         const percentage = ((d.x1 - d.x0) / (2 * Math.PI) * 100).toFixed(2);
+    //         return `(${percentage}%)`;
+    //     })
+    //     .attr("dy", "1.5em")
+    //     .style("font-size", "9px");
 
-    // Function to transform the label's position
+    function clicked(event, p) {
+        parent.datum(p.parent || root);
+
+        root.each(d => d.target = {
+            x0: Math.max(0, Math.min(1, (d.x0 - p.x0) / (p.x1 - p.x0))) * 2 * Math.PI,
+            x1: Math.max(0, Math.min(1, (d.x1 - p.x0) / (p.x1 - p.x0))) * 2 * Math.PI,
+            y0: Math.max(0, d.y0 - p.depth),
+            y1: Math.max(0, d.y1 - p.depth)
+        });
+
+        const t = svgEnter.transition().duration(750);
+
+        path.transition(t)
+            .tween("data", function(d) {
+                const i = d3.interpolate(d.current, d.target);
+                return function(t) {
+                    d.current = i(t);
+                    return arc(d.current);
+                };
+            })
+            .filter(function(d) {
+              return +this.getAttribute("fill-opacity") || arcVisible(d.target);
+            })
+              .attr("fill-opacity", d => arcVisible(d.target) ? (d.children ? 0.6 : 0.4) : 0)
+              .attr("pointer-events", d => arcVisible(d.target) ? "auto" : "none") 
+      
+              .attrTween("d", d => () => arc(d.current));;
+    
+              labelGroup.filter(function(d) {
+                return +this.getAttribute("fill-opacity") || labelVisible(d.target);
+              }).transition(t)
+                .attr("fill-opacity", d => +labelVisible(d.target))
+                .attrTween("transform", d => () => labelTransform(d.current));
+    }
+
     function labelTransform(d) {
         const x = (d.x0 + d.x1) / 2 * 180 / Math.PI;
         const y = (d.y0 + d.y1) / 2 * radius;
         return `rotate(${x - 90}) translate(${y},0) rotate(${x < 180 ? 0 : 180})`;
     }
+
+    function arcVisible(d) {
+        return d.y1 <= 3 && d.y0 >= 1 && d.x1 > d.x0;
+    }
+
+    function labelVisible(d) {
+    return d.y1 <= 3 && d.y0 >= 1 && (d.y1 - d.y0) * (d.x1 - d.x0) > 0.03 && arcVisible(d);
 }
+
+}
+
+
 
 
 
