@@ -519,7 +519,8 @@ function drawSunburst() {
     const radius = width / 6;
 
     const data = main_response.genre_data;
-    const color = d3.scaleOrdinal(d3.quantize(d3.interpolateRainbow, data.children.length + 1));
+    const color = d3.scaleOrdinal(d3.quantize(t => d3.interpolateRainbow(t * 0.9 + 0.1), data.children.length + 1)); // Adjust the range within the rainbow
+
 
     const hierarchy = d3.hierarchy(data)
         .sum(d => d.value)
@@ -552,7 +553,7 @@ function drawSunburst() {
         .data(root.descendants().slice(1))
         .join("path")
           .attr("fill", d => { while (d.depth > 1) d = d.parent; return color(d.data.name); })
-          .attr("fill-opacity", d => arcVisible(d.current) ? (d.children ? 0.6 : 0.4) : 0)
+          .attr("fill-opacity", d => arcVisible(d.current) ? (d.children ? 0.65 : 0.5) : 0)
           .attr("pointer-events", d => arcVisible(d.current) ? "auto" : "none")
           .attr("d", d => arc(d.current));
 
