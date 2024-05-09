@@ -29,8 +29,8 @@ load_data()
 var selectedPath = null;  // Global variable to track the selected path
 
 function lineChart() {
-    var svgWidth = 750, svgHeight = 270;
-    var margin = { top: 30, right: 140, bottom: 20, left: 60 };
+    var svgWidth = 850, svgHeight = 230;
+    var margin = { top: 40, right: 180, bottom: 20, left: 60 };
     var width = svgWidth - margin.left - margin.right;
     var height = svgHeight - margin.top - margin.bottom;
 
@@ -117,6 +117,15 @@ function lineChart() {
         .attr("class", "y axis")
         .call(d3.axisLeft(y));
 
+    // Add Y Axis title
+    svg.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 0 - margin.left)
+        .attr("x", 0 - (height / 2))
+        .attr("dy", "1em")
+        .attr("text-anchor", "middle")
+        .text("Frequency"); // Change this text to your desired title
+
     // Drawing the lines for each song
     var song = svg.selectAll(".song")
         .data(songs)
@@ -174,7 +183,6 @@ function lineChart() {
                         d3.select("#sunburst-chart").select("svg").remove();
                         drawSunburst();
                      })
-                     
                 )
                 .catch((error) => {
                     console.error('Error:', error);
@@ -250,11 +258,19 @@ function lineChart() {
         .attr("class", "legend")
         .attr("transform", "translate(" + (width + 5) + ",10)");
 
+        svg.append("text")
+        .attr("x", width / 2)
+        .attr("y", 0 - (margin.top / 2))
+        .attr("text-anchor", "middle")
+        .style("font-size", "20px")
+        .style("font-weight","bold")
+        .text("Top 10 Song Frequency Over Time");
+
     legend.selectAll(".legend-entry")
         .data(songs)
         .enter().append("g")
         .attr("class", "legend-entry")
-        .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; })
+        .attr("transform", function(d, i) { return "translate(0," + i * 15 + ")"; })
         .each(function(d) {
             d3.select(this).append("rect")
                 .attr("width", 10)
@@ -284,9 +300,9 @@ function timeSeriesPlot() {
         d.snapshot_date = parseDate(d.snapshot_date);
     });
 
-    var margin = { top: 5, right: 20, bottom: 30, left: 60 },
-        width = 630 - margin.left - margin.right,
-        height = 60 - margin.top - margin.bottom;
+    var margin = { top: 0, right: 20, bottom: 50, left: 60 },
+        width = 690 - margin.left - margin.right,
+        height = 70 - margin.top - margin.bottom;
 
     var svg = d3.select("#date-selector").append("svg")
         .attr("width", width + margin.left + margin.right)
@@ -310,6 +326,14 @@ function timeSeriesPlot() {
         .style("text-anchor", "end")
         .attr("dx", "1em")
         .attr("dy", "1em");
+
+    // Adding the x-axis title
+    svg.append("text")
+        .attr("class", "x axis-title")
+        .attr("text-anchor", "middle")
+        .attr("x", width / 2)
+        .attr("y", height + margin.bottom - 5)  // Adjust this value to position your x-axis title
+        .text("Date (MM-DD)"); // Customize your axis title here
 
     // Brush setup
     var brush = d3.brushX()
@@ -409,12 +433,12 @@ function drawWorldMap() {
 
         d3.select("#world-map").select("svg").remove();
         const svg = d3.select("#world-map").append("svg")
-                      .attr("width", 750)
-                      .attr("height", 350);
+                      .attr("width", 600)
+                      .attr("height", 300);
 
         const projection = d3.geoMercator()
-                             .scale(85)
-                             .translate([350, 250]);
+                             .scale(70)
+                             .translate([270, 215]);
 
         const path = d3.geoPath().projection(projection);
 
@@ -526,8 +550,58 @@ function drawWorldMap() {
                 }
             });
 
-        // Consider adding a legend here to explain the color scale
-    }).catch(function(error) {
+            svg.append("text")
+            .attr("x", 350)  // Center the text
+            .attr("y", 20)   // Position the text 30 units down from the top
+            .attr("text-anchor", "middle")  // Center-align the text
+            .style("font-size", "20px")  // Font size for the title
+            .style("font-weight","bold")
+            .text("Choropleth World Map");  // Text content
+
+        // Create gradient for legend
+        const defs = svg.append("defs");
+        const linearGradient = defs.append("linearGradient")
+                                   .attr("id", "gradient-color")
+                                   .attr("x1", "0%")
+                                   .attr("x2", "0%")
+                                   .attr("y1", "100%")
+                                   .attr("y2", "0%");
+
+        // Create a smooth gradient by interpolating over many points
+        const numStops = 10;  // Increase for smoother gradients
+        const gradientRange = d3.range(numStops).map(i => i / (numStops - 1));
+        linearGradient.selectAll("stop")
+                      .data(gradientRange)
+                      .enter().append("stop")
+                      .attr("offset", d => `${d * 100}%`)
+                      .attr("stop-color", d => colorScale(d * (d3.max(frequencies) - d3.min(frequencies)) + d3.min(frequencies)));
+
+        // Add color scale legend vertically
+        const legendHeight = 200;
+        const legendWidth = 20;
+        const legend = svg.append("g")
+                          .attr("transform", "translate(560, 50)");  // Position the legend on the right
+
+        legend.append("rect")
+              .attr("width", legendWidth)
+              .attr("height", legendHeight)
+              .style("fill", "url(#gradient-color)");
+
+        // Add minimum and maximum labels for the legend
+        legend.append("text")
+              .attr("x", -5)
+              .attr("y", legendHeight+7)
+              .attr("alignment-baseline", "hanging")
+              .text(d3.min(frequencies).toFixed(2));
+
+        legend.append("text")
+              .attr("x", -5)
+              .attr("y", -7)
+              .attr("alignment-baseline", "baseline")
+              .attr("text-anchor", "start")
+              .text(d3.max(frequencies).toFixed(2));
+
+        }).catch(function(error) {
         console.error('Error loading or processing data:', error);
     });
 }
@@ -535,9 +609,9 @@ function drawWorldMap() {
 
 
 function drawSunburst() {
-    const width = 325;
+    const width = 288;
     const height = width;
-    const radius = width / 6;
+    const radius = width / 7;
 
     const data = main_response.genre_data;
     const color = d3.scaleOrdinal(d3.quantize(t => d3.interpolateRainbow(t * 0.9 + 0.1), data.children.length + 1)); // Adjust the range within the rainbow
@@ -564,17 +638,25 @@ function drawSunburst() {
     const svg = d3.select("#sunburst-chart").selectAll("svg").data([null]);
     const svgEnter = svg.enter().append("svg")
         .merge(svg)
-        .attr("viewBox", [-width / 2, -height / 2, width, height])
-        .attr("width", width)
+        .attr("viewBox", [-width / 2 - 10, -height / 2 - 10, width, height])
+        .attr("width", width+20)
         .attr("height", height)
         .style("font", "8px sans-serif");
+
+    svgEnter.append("text")
+        .attr("x", 0) // Positioning text at the center
+        .attr("y", -height / 2 + 10) // Positioning text 20 pixels from the top edge of the SVG
+        .attr("text-anchor", "middle") // Centering text horizontally
+        .style("font-size", "20px") // Font size of the title
+        .style("font-weight", "bold") // Font weight of the title
+        .text("Genre Sunburst"); // The title text
 
     const path = svgEnter.append("g")
         .selectAll("path")
         .data(root.descendants().slice(1))
         .join("path")
           .attr("fill", d => { while (d.depth > 1) d = d.parent; return color(d.data.name); })
-          .attr("fill-opacity", d => arcVisible(d.current) ? (d.children ? 0.65 : 0.5) : 0)
+          .attr("fill-opacity", d => arcVisible(d.current) ? (d.children ? 0.8 : 0.6) : 0)
           .attr("pointer-events", d => arcVisible(d.current) ? "auto" : "none")
           .attr("d", d => arc(d.current));
 
@@ -598,7 +680,7 @@ function drawSunburst() {
     .attr("transform", d => labelTransform(d.current))
     .each(function(d) {
         const text = d.data.name;
-        const shortenedText = text.length <= 10 ? text : `${text.substring(0, 10)}`;
+        const shortenedText = text.length <= 8 ? text : `${text.substring(0, 8)}`;
         const percentage = ((d.x1 - d.x0) / (2 * Math.PI) * 100).toFixed(2);
         d3.select(this).append("tspan")
             .text(shortenedText)
@@ -616,14 +698,6 @@ function drawSunburst() {
     .attr("fill", "none")
     .attr("pointer-events", "all")
     .on("click", clicked);
-
-    // labelGroup.append("text")
-    //     .text(d => {
-    //         const percentage = ((d.x1 - d.x0) / (2 * Math.PI) * 100).toFixed(2);
-    //         return `(${percentage}%)`;
-    //     })
-    //     .attr("dy", "1.5em")
-    //     .style("font-size", "9px");
 
     function clicked(event, p) {
         fetch('/update-genre', {
@@ -665,7 +739,7 @@ function drawSunburst() {
             .filter(function(d) {
               return +this.getAttribute("fill-opacity") || arcVisible(d.target);
             })
-              .attr("fill-opacity", d => arcVisible(d.target) ? (d.children ? 0.6 : 0.4) : 0)
+              .attr("fill-opacity", d => arcVisible(d.target) ? (d.children ? 0.8 : 0.6) : 0)
               .attr("pointer-events", d => arcVisible(d.target) ? "auto" : "none") 
       
               .attrTween("d", d => () => arc(d.current));;
@@ -692,8 +766,6 @@ function drawSunburst() {
 }
 
 }
-
-
 
 
 
@@ -724,9 +796,9 @@ function renderPCP() {
     d3.select("#pcp-plot").select("svg").remove();
 
     // Define margins, width, and height for the plot area
-    const margin = { top: 30, right: 10, bottom: 5, left: 5 }, // Increased left margin for axis labels
-        width = 700 - margin.left - margin.right,
-        height = 325 - margin.top - margin.bottom;
+    const margin = { top: 50, right: 5, bottom: 10, left: 5 }, // Increased left margin for axis labels
+        width = 690 - margin.left - margin.right,
+        height = 288 - margin.top - margin.bottom;
 
     // Append SVG and a group element to the DOM
     const svg = d3.select("#pcp-plot")
@@ -739,10 +811,11 @@ function renderPCP() {
     // Add title to the plot
     svg.append("text")
         .attr("class", "plot-title")
-        .attr("x", (width + margin.left + margin.right) / 2 - 30)
-        .attr("y", margin.bottom + 460)
+        .attr("x", 340)
+        .attr("y", -30)
         .attr("text-anchor", "middle")
-        .text("PCP Plot")
+        .text("Parallel Coordinate Plot")
+        .style("font-size", "20px") 
         .style("font-weight", "bold");
 
     // Determine dimensions excluding 'Cluster'
@@ -959,13 +1032,13 @@ function drawWordCloud() {
     // Set up the font size scale based on min and max counts
     const fontSizeScale = d3.scaleLinear()
         .domain([minCount, maxCount])
-        .range([10, 40]);  // Set the range of font sizes you want
+        .range([13, 40]);  // Set the range of font sizes you want
 
     Math.seedrandom('your_seed_here');
 
     // Set up the word cloud layout
     const layout = d3.layout.cloud()
-        .size([480, 325])  // Set the size of the word cloud area
+        .size([470, 288])  // Set the size of the word cloud area
         .words(wordCloudData)
         .padding(5)
         .rotate(() => ~~(Math.random() * 2) * 90)
@@ -992,6 +1065,15 @@ function drawWordCloud() {
             .attr("text-anchor", "middle")
             .attr("transform", d => "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")")
             .text(d => d.text);
-    }
+
+            // Add title to the word cloud
+        svg.append("text")
+            .attr("x", 0) // Position at the center of the SVG
+            .attr("y", -125) // Position above the word cloud
+            .attr("text-anchor", "middle")
+            .attr("font-size", "20px") // Set the font size for the title
+            .attr("font-weight", "bold") // Optional: make the title bold
+            .text("Top Artists"); // Title text
+}
 }
 

@@ -3,6 +3,7 @@ html, body {
     width: 100%;
     margin: 0;
     padding: 0;
+    background-color: #bfe9db;
 }
 
 
@@ -92,3 +93,85 @@ svg text{
 }
 
 
+header {
+    padding-top: 10px;
+    padding-bottom: 10px;
+    display: flex;
+    justify-content: center;
+    background-color:#0b8457;
+}
+
+h1 {
+    margin: 0;
+    font-size: 2em;
+    color: white;
+}
+
+
+#line-plot {
+    margin: 10px;
+    margin-bottom: 0;
+    background-color: #E1F6F4;
+    border: 1px solid #bbe4e9;
+    border-bottom: none;
+    border-radius: 10px; 
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.1);
+    margin-right: 5px;
+}
+
+#date-selector {
+    margin: 10px;
+    margin-top: 0;
+    background-color: #E1F6F4;
+    border: 1px solid #bbe4e9;
+    border-top: none;
+    border-radius: 10px; 
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.1);
+    margin-right: 5px;
+    margin-bottom: 5px;
+}
+
+
+#world-map {
+    margin: 10px;
+    background-color: #E1F6F4;
+    border: 1px solid #bbe4e9;
+    border-radius: 10px; 
+    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.1);
+    margin-left: 5px;
+    margin-bottom: 5px;
+}
+
+
+#pcp-plot {
+    margin: 5px;
+    background-color: #E1F6F4;
+    border: 1px solid #bbe4e9;
+    border-radius: 10px; 
+    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 0;
+}
+
+
+#sunburst-chart {
+    margin: 5px;
+    background-color: #E1F6F4;
+    border: 1px solid #bbe4e9;
+    border-radius: 10px; 
+    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 0;
+}
+
+
+#word-cloud {
+    margin: 5px;
+    background-color: #E1F6F4;
+    border: 1px solid #bbe4e9;
+    border-radius: 10px; 
+    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 0;
+}
