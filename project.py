@@ -16,6 +16,7 @@ fixed_start_date = None
 fixed_end_date = None
 songName = "all"
 countryCode = "all"
+selectedGenre = "root"
 
 @app.route("/")
 def index():
@@ -33,7 +34,7 @@ def readdata():
 
 @app.route("/data")
 def mainfunc():
-    global random_sample, start_date, end_date, fixed_start_date, fixed_end_date, songName, countryCode
+    global random_sample, start_date, end_date, fixed_start_date, fixed_end_date, songName, countryCode, selectedGenre
 
     if random_sample is None:
         random_sample = readdata()
@@ -71,10 +72,18 @@ def mainfunc():
     selected_columns = ['danceability', 'energy', 'key', 'loudness',
                         'speechiness', 'acousticness', 
                         'liveness', 'valence', 'tempo']
-
-    pcp_data=filtered_sample[selected_columns]
+    
     np.random.seed(42)
-    pcp_data = pcp_data.sample(n=500)
+    pcp_data=filtered_sample[selected_columns].copy()
+    pcp_data.loc[:, 'Cluster'] = filtered_sample['genre']
+
+    
+    if selectedGenre=="root":
+        pcp_data = pcp_data.sample(n=500)
+    else:
+        pcp_data=pcp_data[pcp_data['Cluster']==selectedGenre]
+        pcp_data = pcp_data.sample(n=100)
+
     pcp_data_json = pcp_data.to_json(orient='records')
 
     ############################### PCP Plot #########################################
@@ -208,7 +217,7 @@ def mainfunc():
 
 @app.route('/update-date-range', methods=['POST'])
 def update_date_range():
-    global random_sample, start_date, end_date, songName, countryCode
+    global random_sample, start_date, end_date, songName, countryCode, selectedGenre
 
     if request.is_json:
         data = request.get_json()
@@ -217,6 +226,7 @@ def update_date_range():
 
         songName = "all"
         countryCode = "all"
+        selectedGenre = "root"
 
         return jsonify({"status": "success", "message": "Date range updated successfully."}), 200
     else:
@@ -224,7 +234,9 @@ def update_date_range():
     
 @app.route('/update-selected-song', methods=['POST'])
 def handle_data():
-    global songName
+    global songName, selectedGenre
+
+    selectedGenre = "root"
     
     data = request.json
     songName=data['songName'] # type: ignore
@@ -233,16 +245,28 @@ def handle_data():
 
 @app.route('/country_data', methods=['POST'])
 def handle_country_click():
-    global countryCode
+    global countryCode, selectedGenre
     if request.is_json:
         data = request.get_json()  # Extract JSON data from request
         countryCode = data.get('country_code')
+
+        selectedGenre = "root"
 
         # Return a response to the client
         return jsonify({"status": "success","message": "Data received successfully!"}), 200
     else:
         # If the request is not in JSON format, return an error
         return jsonify({"status": "error","message": "Request body must be JSON"}), 400
+    
+@app.route('/update-genre', methods=['POST'])
+def handle_genre():
+    global selectedGenre
+    
+    data = request.json
+    selectedGenre = data.get('genre')
+    
+    return jsonify({"status": "success", "message": "Data received"})
+
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -26,7 +26,6 @@ function load_data(){
 }
 load_data()
 
-
 var selectedPath = null;  // Global variable to track the selected path
 
 function lineChart() {
@@ -405,7 +404,7 @@ function drawWorldMap() {
     d3.json("https://d3js.org/world-110m.v1.json").then(function(world) {
         const countries = topojson.feature(world, world.objects.countries).features;
         const frequencies = countries.map(d => countryFrequencyData[d.id]?.frequency || 0);
-        const colorScale = d3.scaleSequential(d3.interpolatePlasma )
+        const colorScale = d3.scaleSequential(d3.interpolatePlasma)
                              .domain([d3.max(frequencies), d3.min(frequencies)]);
 
         d3.select("#world-map").select("svg").remove();
@@ -419,14 +418,22 @@ function drawWorldMap() {
 
         const path = d3.geoPath().projection(projection);
 
+        // Variable to keep track of the highlighted country
+        let highlighted = null;
+
         svg.on("click", function(event) {
-            // Get the element that was clicked
             const clickedElement = d3.select(event.target);
         
-            // Check if the clicked element is one of the country paths
-            // Assuming country paths have a specific class 'country-path' or can be identified by nodeName
             if (clickedElement.node().nodeName !== "path" || !clickedElement.classed("country-path")) {
-                // Only execute this block if the click was not on a country
+
+                // Reset previous highlight
+                if (highlighted) {
+                    d3.select(highlighted).attr("fill", d => {
+                        const frequency = countryFrequencyData[d.id]?.frequency;
+                        return frequency ? colorScale(frequency) : "#ccc";
+                    });
+                }
+
                 fetch('/country_data', {
                     method: 'POST',
                     headers: {
@@ -440,12 +447,15 @@ function drawWorldMap() {
                       main_response = response;
                   }).then(() => {
                       drawSunburst();
-                  }))
+                  }).then(function(){
+                    renderPCP();
+                 }).then(() => {
+                    drawWordCloud();
+                }))
                   .catch(error => console.error('Error:', error));
             }
         });
         
-
         const tooltip = d3.select("body").append("div")
                           .attr("class", "tooltip")
                           .style("position", "absolute")
@@ -455,7 +465,7 @@ function drawWorldMap() {
                           .style("border-radius", "5px")
                           .style("padding", "5px");
 
-        svg.selectAll("path")
+        const countryPaths = svg.selectAll("path")
            .data(countries)
            .enter().append("path")
            .attr("class", "country-path")
@@ -467,7 +477,6 @@ function drawWorldMap() {
            .attr("stroke", "white")
            .on("mouseover", function(event, d) {
                const countryInfo = countryFrequencyData[d.id];
-
                if (countryInfo) {
                    tooltip.style("visibility", "visible")
                           .html(`${countryInfo.country_name}: ${parseFloat(countryInfo.frequency).toFixed(2)}`)
@@ -481,6 +490,20 @@ function drawWorldMap() {
            .on("click", function(event, d) {
                 const countryInfo = countryFrequencyData[d.id];
                 if (countryInfo) {
+                    // Reset previous highlight
+                    if (highlighted) {
+                        d3.select(highlighted).attr("fill", d => {
+                            const frequency = countryFrequencyData[d.id]?.frequency;
+                            return frequency ? colorScale(frequency) : "#ccc";
+                        });
+                    }
+                    // Highlight the clicked country
+                    d3.select(this)
+                      .attr("fill", "red");
+
+                    // Update the highlighted element
+                    highlighted = this;
+
                     fetch('/country_data', {
                         method: 'POST',
                         headers: {
@@ -490,17 +513,15 @@ function drawWorldMap() {
                             country_code: countryInfo.country,
                         })
                     }).then(response => response.json())
-                    .then(
-                        d3.json("/data").then(function(response) {
-                            main_response=response;
-                        })
-                         .then(function(){
-                            drawSunburst();
-                         })
-                         .then(function(){
-                            drawWordCloud();
-                         })
-                    )
+                    .then(() => d3.json("/data").then(function(response) {
+                        main_response = response;
+                    }).then(() => {
+                        drawSunburst();
+                    }).then(function(){
+                        renderPCP();
+                    }).then(() => {
+                        drawWordCloud();
+                    }))
                     .catch(error => console.error('Error:', error));
                 }
             });
@@ -604,6 +625,23 @@ function drawSunburst() {
     //     .style("font-size", "9px");
 
     function clicked(event, p) {
+        fetch('/update-genre', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                genre: p.data.name
+            })
+        }).then(response => response.json())
+        .then(() => d3.json("/data").then(function(response) {
+            main_response = response;
+        }).then(() => {
+            renderPCP();
+        }))
+        .catch(error => console.error('Error:', error));
+
+
         parent.datum(p.parent || root);
 
         root.each(d => d.target = {
@@ -896,6 +934,9 @@ function renderPCP() {
         return nextIndex;
     }
 }
+
+
+
 
 function drawWordCloud() {
     
