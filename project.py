@@ -263,7 +263,7 @@ def handle_genre():
     global selectedGenre
     
     data = request.json
-    selectedGenre = data.get('genre')
+    selectedGenre = data.['genre'] # type: ignore
     
     return jsonify({"status": "success", "message": "Data received"})
 
