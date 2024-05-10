@@ -445,6 +445,18 @@ function drawWorldMap() {
         // Variable to keep track of the highlighted country
         let highlighted = null;
 
+        // Initialize zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([1, 8])  // Limit zoom in and out
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        // Apply the zoom behavior to the SVG canvas
+        svg.call(zoom);
+
+        const g = svg.append("g");
+
         svg.on("click", function(event) {
             const clickedElement = d3.select(event.target);
         
@@ -489,7 +501,7 @@ function drawWorldMap() {
                           .style("border-radius", "5px")
                           .style("padding", "5px");
 
-        const countryPaths = svg.selectAll("path")
+        const countryPaths = g.selectAll("path")
            .data(countries)
            .enter().append("path")
            .attr("class", "country-path")
@@ -550,13 +562,14 @@ function drawWorldMap() {
                 }
             });
 
-            svg.append("text")
-            .attr("x", 350)  // Center the text
-            .attr("y", 20)   // Position the text 30 units down from the top
-            .attr("text-anchor", "middle")  // Center-align the text
-            .style("font-size", "20px")  // Font size for the title
-            .style("font-weight","bold")
-            .text("Choropleth World Map");  // Text content
+        // Title of the map
+        g.append("text")
+            .attr("x", 350)
+            .attr("y", 20)
+            .attr("text-anchor", "middle")
+            .style("font-size", "20px")
+            .style("font-weight", "bold")
+            .text("Choropleth World Map");
 
         // Create gradient for legend
         const defs = svg.append("defs");
@@ -567,8 +580,7 @@ function drawWorldMap() {
                                    .attr("y1", "100%")
                                    .attr("y2", "0%");
 
-        // Create a smooth gradient by interpolating over many points
-        const numStops = 10;  // Increase for smoother gradients
+        const numStops = 10;
         const gradientRange = d3.range(numStops).map(i => i / (numStops - 1));
         linearGradient.selectAll("stop")
                       .data(gradientRange)
@@ -576,21 +588,21 @@ function drawWorldMap() {
                       .attr("offset", d => `${d * 100}%`)
                       .attr("stop-color", d => colorScale(d * (d3.max(frequencies) - d3.min(frequencies)) + d3.min(frequencies)));
 
-        // Add color scale legend vertically
+        // Add color scale legend
         const legendHeight = 200;
         const legendWidth = 20;
-        const legend = svg.append("g")
-                          .attr("transform", "translate(560, 50)");  // Position the legend on the right
+        const legend = g.append("g")
+                        .attr("transform", "translate(560, 50)");
 
         legend.append("rect")
               .attr("width", legendWidth)
               .attr("height", legendHeight)
               .style("fill", "url(#gradient-color)");
 
-        // Add minimum and maximum labels for the legend
+        // Legend labels
         legend.append("text")
               .attr("x", -5)
-              .attr("y", legendHeight+7)
+              .attr("y", legendHeight + 7)
               .attr("alignment-baseline", "hanging")
               .text(d3.min(frequencies).toFixed(2));
 
@@ -601,10 +613,11 @@ function drawWorldMap() {
               .attr("text-anchor", "start")
               .text(d3.max(frequencies).toFixed(2));
 
-        }).catch(function(error) {
+    }).catch(function(error) {
         console.error('Error loading or processing data:', error);
     });
 }
+
 
 
 
