@@ -1,6 +1,10 @@
-SBU CSE 564 - Visualization course
+SBU CSE 564 - Visualization course - Final Project
 
-Final Project
+
+# Spotify Pulse
+
+![image](https://github.com/user-attachments/assets/c77a15e5-c34d-4dcd-8a93-b463dfe83fca)
+
 
 # Instructions to run:
 1) Download the code.
